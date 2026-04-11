@@ -241,6 +241,11 @@ export default function App() {
               caregivers={caregivers} 
               matchings={matchings} 
               onViewAll={() => setActiveTab('matchings')}
+              onEditCaregiver={(id) => {
+                setEditingId(id);
+                setModalType('caregiver');
+                setShowModal(true);
+              }}
             />
           )}
 
@@ -494,7 +499,19 @@ function AdminManagementView({ admins }: { admins: AdminUser[] }) {
   );
 }
 
-function DashboardView({ patients, caregivers, matchings, onViewAll }: { patients: Patient[], caregivers: Caregiver[], matchings: Matching[], onViewAll: () => void }) {
+function DashboardView({ 
+  patients, 
+  caregivers, 
+  matchings, 
+  onViewAll,
+  onEditCaregiver 
+}: { 
+  patients: Patient[], 
+  caregivers: Caregiver[], 
+  matchings: Matching[], 
+  onViewAll: () => void,
+  onEditCaregiver: (id: string) => void
+}) {
   const activeMatchings = matchings.filter(m => m.status === 'active').length;
   const completedMatchings = matchings.filter(m => m.status === 'completed').length;
   const cancelledMatchings = matchings.filter(m => m.status === 'cancelled').length;
@@ -513,8 +530,8 @@ function DashboardView({ patients, caregivers, matchings, onViewAll }: { patient
   ];
 
   const paymentData = [
-    { name: '간병인 회비', paid: caregiverPaidCount, unpaid: caregiverUnpaidCount },
-    { name: '환자 간병비', paid: patientPaidCount, unpaid: patientUnpaidCount },
+    { name: '납부 완료', value: caregiverPaidCount, color: '#3b82f6' },
+    { name: '미납', value: caregiverUnpaidCount, color: '#fbbf24' },
   ];
 
   const recentMatchings = matchings.slice(0, 5);
@@ -615,21 +632,38 @@ function DashboardView({ patients, caregivers, matchings, onViewAll }: { patient
           </div>
         </div>
 
-        {/* Payment Chart */}
+        {/* Unpaid Caregivers List */}
         <div className="bg-white p-6 rounded-2xl border border-zinc-200 shadow-sm">
-          <h3 className="text-lg font-bold mb-6">납부 현황 통계</h3>
-          <div className="h-[300px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={paymentData} layout="vertical">
-                <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f4f4f5" />
-                <XAxis type="number" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#71717a' }} />
-                <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#71717a' }} width={100} />
-                <Tooltip cursor={{ fill: '#f8fafc' }} contentStyle={{ borderRadius: '12px', border: '1px solid #e4e4e7' }} />
-                <Legend iconType="circle" wrapperStyle={{ paddingTop: '20px' }} />
-                <Bar dataKey="paid" name="납부 완료" fill="#3b82f6" stackId="a" barSize={40} />
-                <Bar dataKey="unpaid" name="미납" fill="#fbbf24" stackId="a" barSize={40} radius={[0, 6, 6, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-lg font-bold">회비 미납 간병인 명단</h3>
+            <span className="px-2.5 py-1 bg-amber-50 text-amber-700 rounded-lg text-xs font-bold">
+              총 {caregiverUnpaidCount}명
+            </span>
+          </div>
+          <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
+            {caregivers.filter(c => !c.membershipPaid).length === 0 ? (
+              <p className="text-sm text-zinc-500 text-center py-8">미납자가 없습니다. 👍</p>
+            ) : (
+              caregivers.filter(c => !c.membershipPaid).map(c => (
+                <div key={c.id} className="flex items-center justify-between p-3 rounded-xl bg-zinc-50 border border-zinc-100">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 bg-zinc-200 rounded-full flex items-center justify-center text-xs font-bold text-zinc-600">
+                      {c.name[0]}
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold">{c.name}</p>
+                      <p className="text-[11px] text-zinc-500">{c.contact || '연락처 없음'}</p>
+                    </div>
+                  </div>
+                  <button 
+                    onClick={() => onEditCaregiver(c.id)}
+                    className="text-[11px] font-bold text-zinc-400 hover:text-zinc-900 transition-colors"
+                  >
+                    정보 수정
+                  </button>
+                </div>
+              ))
+            )}
           </div>
         </div>
       </div>
