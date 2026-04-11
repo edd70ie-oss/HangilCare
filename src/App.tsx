@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, FormEvent } from 'react';
 import { 
   collection, 
   onSnapshot, 
@@ -42,7 +42,9 @@ import {
   Clock, 
   XCircle,
   TrendingUp,
-  Calendar
+  Calendar,
+  ChevronDown,
+  LayoutDashboard
 } from 'lucide-react';
 
 // Types
@@ -108,6 +110,7 @@ export default function App() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isSignUp, setIsSignUp] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   // Auth
   useEffect(() => {
@@ -163,7 +166,7 @@ export default function App() {
     };
   }, [user]);
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleLogin = async (e: FormEvent) => {
     e.preventDefault();
     try {
       if (isSignUp) {
@@ -212,7 +215,7 @@ export default function App() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
               </svg>
             </div>
-            <h1 className="text-2xl font-bold text-zinc-900 mb-2">CareMatch Admin</h1>
+            <h1 className="text-2xl font-bold text-zinc-900 mb-2">Hangil Care</h1>
             <p className="text-zinc-600">관리자 전용 시스템입니다. {isSignUp ? '계정을 생성하세요.' : '로그인하세요.'}</p>
           </div>
 
@@ -275,7 +278,7 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-zinc-50 pb-20">
+    <div className="min-h-screen bg-zinc-50 pb-20 overflow-x-hidden">
       {/* Header */}
       <header className="sticky top-0 z-10 bg-white/80 backdrop-blur-md border-b border-zinc-200 px-4 py-4">
         <div className="max-w-5xl mx-auto flex items-center justify-between">
@@ -285,7 +288,7 @@ export default function App() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
               </svg>
             </div>
-            <h1 className="text-xl font-bold tracking-tight">CareMatch</h1>
+            <h1 className="text-xl font-bold tracking-tight">Hangil Care</h1>
           </div>
           <div className="flex items-center gap-4">
             <span className="text-sm text-zinc-500 hidden sm:inline">{user.email}</span>
@@ -295,24 +298,81 @@ export default function App() {
       </header>
 
       <main className="max-w-5xl mx-auto px-4 py-8">
-        {/* Tabs */}
-        <div className="flex gap-1 bg-zinc-200/50 p-1 rounded-xl mb-8 w-fit overflow-x-auto max-w-full">
-          {(['dashboard', 'patients', 'caregivers', 'matchings', 'admins'] as const).map(tab => (
+        {/* Navigation */}
+        <div className="mb-8">
+          {/* Mobile Dropdown */}
+          <div className="md:hidden relative">
             <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${
-                activeTab === tab 
-                  ? 'bg-white text-zinc-900 shadow-sm' 
-                  : 'text-zinc-500 hover:text-zinc-700'
-              }`}
+              onClick={() => setIsMenuOpen(!isMenuOpen)}
+              className="w-full flex items-center justify-between px-5 py-4 bg-white border border-zinc-200 rounded-2xl shadow-sm text-zinc-900 font-bold"
             >
-              {tab === 'dashboard' ? '대시보드' : 
-               tab === 'patients' ? '환자' : 
-               tab === 'caregivers' ? '간병인' : 
-               tab === 'matchings' ? '매칭 현황' : '관리자 설정'}
+              <div className="flex items-center gap-3">
+                {activeTab === 'dashboard' && <LayoutDashboard className="w-5 h-5 text-zinc-500" />}
+                {activeTab === 'patients' && <Users className="w-5 h-5 text-zinc-500" />}
+                {activeTab === 'caregivers' && <UserRound className="w-5 h-5 text-zinc-500" />}
+                {activeTab === 'matchings' && <Handshake className="w-5 h-5 text-zinc-500" />}
+                {activeTab === 'admins' && <Users className="w-5 h-5 text-zinc-500" />}
+                <span>
+                  {activeTab === 'dashboard' ? '대시보드' : 
+                   activeTab === 'patients' ? '환자 관리' : 
+                   activeTab === 'caregivers' ? '간병인 관리' : 
+                   activeTab === 'matchings' ? '매칭 현황' : '관리자 설정'}
+                </span>
+              </div>
+              <ChevronDown className={`w-5 h-5 text-zinc-400 transition-transform duration-200 ${isMenuOpen ? 'rotate-180' : ''}`} />
             </button>
-          ))}
+
+            {isMenuOpen && (
+              <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-zinc-200 rounded-2xl shadow-xl z-20 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+                {(['dashboard', 'patients', 'caregivers', 'matchings', 'admins'] as const).map(tab => (
+                  <button
+                    key={tab}
+                    onClick={() => {
+                      setActiveTab(tab);
+                      setIsMenuOpen(false);
+                    }}
+                    className={`w-full flex items-center gap-3 px-5 py-4 text-left transition-colors ${
+                      activeTab === tab 
+                        ? 'bg-zinc-50 text-zinc-900 font-bold' 
+                        : 'text-zinc-500 hover:bg-zinc-50'
+                    }`}
+                  >
+                    {tab === 'dashboard' && <LayoutDashboard className="w-5 h-5" />}
+                    {tab === 'patients' && <Users className="w-5 h-5" />}
+                    {tab === 'caregivers' && <UserRound className="w-5 h-5" />}
+                    {tab === 'matchings' && <Handshake className="w-5 h-5" />}
+                    {tab === 'admins' && <Users className="w-5 h-5" />}
+                    <span>
+                      {tab === 'dashboard' ? '대시보드' : 
+                       tab === 'patients' ? '환자 관리' : 
+                       tab === 'caregivers' ? '간병인 관리' : 
+                       tab === 'matchings' ? '매칭 현황' : '관리자 설정'}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Desktop Tabs */}
+          <div className="hidden md:flex gap-1 bg-zinc-200/50 p-1 rounded-xl w-full overflow-x-auto no-scrollbar">
+            {(['dashboard', 'patients', 'caregivers', 'matchings', 'admins'] as const).map(tab => (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${
+                  activeTab === tab 
+                    ? 'bg-white text-zinc-900 shadow-sm' 
+                    : 'text-zinc-500 hover:text-zinc-700'
+                }`}
+              >
+                {tab === 'dashboard' ? '대시보드' : 
+                 tab === 'patients' ? '환자' : 
+                 tab === 'caregivers' ? '간병인' : 
+                 tab === 'matchings' ? '매칭 현황' : '관리자 설정'}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Content */}
@@ -427,47 +487,92 @@ export default function App() {
           )}
 
           {activeTab === 'matchings' && (
-            <div className="overflow-x-auto bg-white rounded-2xl border border-zinc-200 shadow-sm">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="border-b border-zinc-100">
-                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-zinc-500">환자</th>
-                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-zinc-500">병실</th>
-                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-zinc-500">간병인</th>
-                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-zinc-500">상태</th>
-                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-zinc-500">시작일</th>
-                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-zinc-500">작업</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-zinc-50">
-                  {matchings.map(m => {
-                    const patient = patients.find(p => p.id === m.patientId);
-                    const caregiver = caregivers.find(c => c.id === m.caregiverId);
-                    return (
-                      <tr key={m.id} className="hover:bg-zinc-50/50 transition-colors">
-                        <td className="px-6 py-4 font-medium">{patient?.name || '삭제된 환자'}</td>
-                        <td className="px-6 py-4 text-zinc-500">{patient?.ward || '-'}</td>
-                        <td className="px-6 py-4">{caregiver?.name || '삭제된 간병인'}</td>
-                        <td className="px-6 py-4">
-                          <span className={`px-2 py-1 rounded-md text-xs font-medium ${
-                            m.status === 'active' ? 'bg-blue-50 text-blue-700' : 
-                            m.status === 'completed' ? 'bg-zinc-100 text-zinc-700' : 'bg-red-50 text-red-700'
-                          }`}>
-                            {m.status === 'active' ? '진행 중' : m.status === 'completed' ? '완료' : '취소'}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 text-sm text-zinc-500">{m.startDate}</td>
-                        <td className="px-6 py-4">
-                          <button 
-                            onClick={() => { setEditingId(m.id); setModalType('matching'); setShowModal(true); }}
-                            className="text-xs font-medium text-zinc-900 hover:underline"
-                          >수정</button>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+            <div className="space-y-4">
+              {/* Mobile Card View */}
+              <div className="grid grid-cols-1 gap-4 md:hidden">
+                {matchings.map(m => {
+                  const patient = patients.find(p => p.id === m.patientId);
+                  const caregiver = caregivers.find(c => c.id === m.caregiverId);
+                  return (
+                    <div key={m.id} className="bg-white p-5 rounded-2xl border border-zinc-200 shadow-sm">
+                      <div className="flex justify-between items-start mb-4">
+                        <div>
+                          <p className="text-xs text-zinc-400 mb-1">매칭 정보</p>
+                          <h4 className="font-bold text-lg">{patient?.name || '삭제된 환자'} - {caregiver?.name || '삭제된 간병인'}</h4>
+                        </div>
+                        <span className={`px-2.5 py-1 rounded-lg text-xs font-bold ${
+                          m.status === 'active' ? 'bg-blue-50 text-blue-700' : 
+                          m.status === 'completed' ? 'bg-zinc-100 text-zinc-700' : 'bg-red-50 text-red-700'
+                        }`}>
+                          {m.status === 'active' ? '진행 중' : m.status === 'completed' ? '완료' : '취소'}
+                        </span>
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-4 mb-4">
+                        <div className="bg-zinc-50 p-3 rounded-xl">
+                          <p className="text-[10px] text-zinc-400 uppercase font-bold mb-1">병실</p>
+                          <p className="text-sm font-semibold">{patient?.ward || '-'}</p>
+                        </div>
+                        <div className="bg-zinc-50 p-3 rounded-xl">
+                          <p className="text-[10px] text-zinc-400 uppercase font-bold mb-1">시작일</p>
+                          <p className="text-sm font-semibold">{m.startDate}</p>
+                        </div>
+                      </div>
+
+                      <button 
+                        onClick={() => { setEditingId(m.id); setModalType('matching'); setShowModal(true); }}
+                        className="w-full py-2.5 bg-zinc-50 text-zinc-900 rounded-xl text-sm font-bold hover:bg-zinc-100 transition-colors border border-zinc-100"
+                      >
+                        매칭 정보 수정
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Desktop Table View */}
+              <div className="hidden md:block overflow-x-auto bg-white rounded-2xl border border-zinc-200 shadow-sm">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="border-b border-zinc-100">
+                      <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-zinc-500">환자</th>
+                      <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-zinc-500">병실</th>
+                      <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-zinc-500">간병인</th>
+                      <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-zinc-500">상태</th>
+                      <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-zinc-500">시작일</th>
+                      <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-zinc-500">작업</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-zinc-50">
+                    {matchings.map(m => {
+                      const patient = patients.find(p => p.id === m.patientId);
+                      const caregiver = caregivers.find(c => c.id === m.caregiverId);
+                      return (
+                        <tr key={m.id} className="hover:bg-zinc-50/50 transition-colors">
+                          <td className="px-6 py-4 font-medium">{patient?.name || '삭제된 환자'}</td>
+                          <td className="px-6 py-4 text-zinc-500">{patient?.ward || '-'}</td>
+                          <td className="px-6 py-4">{caregiver?.name || '삭제된 간병인'}</td>
+                          <td className="px-6 py-4">
+                            <span className={`px-2 py-1 rounded-md text-xs font-medium ${
+                              m.status === 'active' ? 'bg-blue-50 text-blue-700' : 
+                              m.status === 'completed' ? 'bg-zinc-100 text-zinc-700' : 'bg-red-50 text-red-700'
+                            }`}>
+                              {m.status === 'active' ? '진행 중' : m.status === 'completed' ? '완료' : '취소'}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 text-sm text-zinc-500">{m.startDate}</td>
+                          <td className="px-6 py-4">
+                            <button 
+                              onClick={() => { setEditingId(m.id); setModalType('matching'); setShowModal(true); }}
+                              className="text-xs font-medium text-zinc-900 hover:underline"
+                            >수정</button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
         </div>
@@ -732,14 +837,14 @@ function DashboardView({
                     <div className="w-8 h-8 bg-zinc-200 rounded-full flex items-center justify-center text-xs font-bold text-zinc-600">
                       {c.name[0]}
                     </div>
-                    <div>
-                      <p className="text-sm font-semibold">{c.name}</p>
-                      <p className="text-[11px] text-zinc-500">{c.contact || '연락처 없음'}</p>
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold truncate">{c.name}</p>
+                      <p className="text-[11px] text-zinc-500 truncate">{c.contact || '연락처 없음'}</p>
                     </div>
                   </div>
                   <button 
                     onClick={() => onEditCaregiver(c.id)}
-                    className="text-[11px] font-bold text-zinc-400 hover:text-zinc-900 transition-colors"
+                    className="text-[11px] font-bold text-zinc-400 hover:text-zinc-900 transition-colors shrink-0 ml-2"
                   >
                     정보 수정
                   </button>
