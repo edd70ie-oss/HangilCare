@@ -89,6 +89,7 @@ export interface Matching {
   caregiverId: string;
   status: 'active' | 'completed' | 'cancelled';
   startDate: string;
+  careFee?: number;
   endDate?: string;
   createdAt: any;
 }
@@ -518,6 +519,10 @@ export default function App() {
                           <p className="text-sm font-semibold">{patient?.ward || '-'}</p>
                         </div>
                         <div className="bg-zinc-50 p-3 rounded-xl">
+                          <p className="text-[10px] text-zinc-400 uppercase font-bold mb-1">간병비</p>
+                          <p className="text-sm font-semibold">{m.careFee ? `${m.careFee.toLocaleString()}원` : (patient?.careFee ? `${patient.careFee.toLocaleString()}원` : '-')}</p>
+                        </div>
+                        <div className="bg-zinc-50 p-3 rounded-xl col-span-2">
                           <p className="text-[10px] text-zinc-400 uppercase font-bold mb-1">시작일</p>
                           <p className="text-sm font-semibold">{m.startDate}</p>
                         </div>
@@ -542,6 +547,7 @@ export default function App() {
                       <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-zinc-500">환자</th>
                       <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-zinc-500">병실</th>
                       <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-zinc-500">간병인</th>
+                      <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-zinc-500">간병비</th>
                       <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-zinc-500">상태</th>
                       <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-zinc-500">시작일</th>
                       <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-zinc-500">작업</th>
@@ -556,6 +562,9 @@ export default function App() {
                           <td className="px-6 py-4 font-medium">{patient?.name || '삭제된 환자'}</td>
                           <td className="px-6 py-4 text-zinc-500">{patient?.ward || '-'}</td>
                           <td className="px-6 py-4">{caregiver?.name || '삭제된 간병인'}</td>
+                          <td className="px-6 py-4 text-sm font-medium">
+                            {m.careFee ? `${m.careFee.toLocaleString()}원` : (patient?.careFee ? `${patient.careFee.toLocaleString()}원` : '-')}
+                          </td>
                           <td className="px-6 py-4">
                             <span className={`px-2 py-1 rounded-md text-xs font-medium ${
                               m.status === 'active' ? 'bg-blue-50 text-blue-700' : 
@@ -998,8 +1007,22 @@ function Modal({ type, editingId, onClose, patients, caregivers, matchings }: an
 
             {type === 'matching' && (
               <>
-                <Select label="환자 선택" value={formData.patientId || ''} onChange={v => setFormData({...formData, patientId: v})} options={patients.map((p:any) => ({l:p.name, v:p.id}))} required />
+                <Select 
+                  label="환자 선택" 
+                  value={formData.patientId || ''} 
+                  onChange={v => {
+                    const patient = patients.find((p:any) => p.id === v);
+                    setFormData({
+                      ...formData, 
+                      patientId: v,
+                      careFee: patient?.careFee || formData.careFee
+                    });
+                  }} 
+                  options={patients.map((p:any) => ({l:p.name, v:p.id}))} 
+                  required 
+                />
                 <Select label="간병인 선택" value={formData.caregiverId || ''} onChange={v => setFormData({...formData, caregiverId: v})} options={caregivers.map((c:any) => ({l:c.name, v:c.id}))} required />
+                <Input label="간병비 (원)" type="number" value={formData.careFee || ''} onChange={(v: string) => setFormData({...formData, careFee: Number(v)})} placeholder="환자 정보의 간병비가 자동 입력됩니다." />
                 <Select label="상태" value={formData.status || 'active'} onChange={v => setFormData({...formData, status: v})} options={[{l:'진행 중',v:'active'},{l:'완료',v:'completed'},{l:'취소',v:'cancelled'}]} />
                 <Input label="시작일" type="date" value={formData.startDate || ''} onChange={v => setFormData({...formData, startDate: v})} required />
               </>
