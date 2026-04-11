@@ -154,8 +154,9 @@ export default function App() {
     try {
       const provider = new GoogleAuthProvider();
       await signInWithPopup(auth, provider);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Login failed", error);
+      alert(`로그인 실패: ${error.message}\n(에러 코드: ${error.code})`);
     }
   };
 
