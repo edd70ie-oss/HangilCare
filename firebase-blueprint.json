@@ -1,0 +1,87 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "App users (admins)",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "displayName": { "type": "string" },
+        "role": { "type": "string", "enum": ["admin"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "role"]
+    },
+    "Patient": {
+      "title": "Patient",
+      "description": "Patient information",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "age": { "type": "number" },
+        "gender": { "type": "string", "enum": ["male", "female"] },
+        "condition": { "type": "string" },
+        "ward": { "type": "string", "description": "Patient's ward/room number" },
+        "guardianContact": { "type": "string", "description": "Guardian's contact number" },
+        "careFeePaid": { "type": "boolean", "description": "Whether the patient has paid the care fee" },
+        "notes": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "age", "gender"]
+    },
+    "Caregiver": {
+      "title": "Caregiver",
+      "description": "Caregiver information",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "age": { "type": "number" },
+        "gender": { "type": "string", "enum": ["male", "female"] },
+        "experience": { "type": "string" },
+        "specialties": { "type": "string" },
+        "status": { "type": "string", "enum": ["working", "waiting", "resting"], "description": "Current work status of the caregiver" },
+        "availability": { "type": "boolean" },
+        "membershipPaid": { "type": "boolean", "description": "Whether the caregiver has paid the membership fee" },
+        "contact": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "age", "gender"]
+    },
+    "Matching": {
+      "title": "Matching",
+      "description": "Matching between patient and caregiver",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "patientId": { "type": "string" },
+        "caregiverId": { "type": "string" },
+        "status": { "type": "string", "enum": ["active", "completed", "cancelled"] },
+        "startDate": { "type": "string", "format": "date" },
+        "endDate": { "type": "string", "format": "date" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["patientId", "caregiverId", "status"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "Admin user profiles"
+    },
+    "/patients/{patientId}": {
+      "schema": "Patient",
+      "description": "Patient records"
+    },
+    "/caregivers/{caregiverId}": {
+      "schema": "Caregiver",
+      "description": "Caregiver records"
+    },
+    "/matchings/{matchingId}": {
+      "schema": "Matching",
+      "description": "Matching records"
+    }
+  }
+}

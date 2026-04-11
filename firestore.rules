@@ -1,0 +1,154 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users
+    // Document ID: {userId} (matches auth.uid)
+    // Fields:
+    //   - uid: string (required)
+    //   - email: string (required, email format)
+    //   - displayName: string (optional)
+    //   - role: string (required, enum: ['admin'])
+    //   - createdAt: timestamp (required)
+    //
+    // Collection: patients
+    // Document ID: auto-generated
+    // Fields:
+    //   - name: string (required)
+    //   - age: number (required)
+    //   - gender: string (required, enum: ['male', 'female'])
+    //   - condition: string (optional)
+    //   - ward: string (optional)
+    //   - guardianContact: string (optional)
+    //   - careFeePaid: bool (optional)
+    //   - notes: string (optional)
+    //   - createdAt: timestamp (required)
+    //
+    // Collection: caregivers
+    // Document ID: auto-generated
+    // Fields:
+    //   - name: string (required)
+    //   - age: number (required)
+    //   - gender: string (required, enum: ['male', 'female'])
+    //   - experience: string (optional)
+    //   - specialties: string (optional)
+    //   - status: string (required, enum: ['working', 'waiting', 'resting'])
+    //   - availability: bool (required)
+    //   - membershipPaid: bool (optional)
+    //   - contact: string (optional)
+    //   - createdAt: timestamp (required)
+    //
+    // Collection: matchings
+    // Document ID: auto-generated
+    // Fields:
+    //   - patientId: string (required)
+    //   - caregiverId: string (required)
+    //   - status: string (required, enum: ['active', 'completed', 'cancelled'])
+    //   - startDate: string (required, ISO 8601)
+    //   - endDate: string (optional, ISO 8601)
+    //   - createdAt: timestamp (required)
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && 
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+         (request.auth.token.email == "edd70ie@gmail.com" && request.auth.token.email_verified == true));
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isValidEmail(email) {
+      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    function isValidDateString(dateStr) {
+      return dateStr is string && dateStr.matches("^\\d{4}-\\d{2}-\\d{2}.*");
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['uid', 'email', 'role', 'createdAt']) &&
+             data.uid == request.auth.uid &&
+             isValidEmail(data.email) &&
+             data.role == 'admin' &&
+             data.createdAt is timestamp;
+    }
+
+    function isValidPatient(data) {
+      return data.keys().hasAll(['name', 'age', 'gender', 'createdAt']) &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
+             data.age is number && data.age >= 0 &&
+             data.gender in ['male', 'female'] &&
+             (!('ward' in data) || data.ward is string) &&
+             (!('guardianContact' in data) || data.guardianContact is string) &&
+             (!('careFeePaid' in data) || data.careFeePaid is bool) &&
+             data.createdAt is timestamp;
+    }
+
+    function isValidCaregiver(data) {
+      return data.keys().hasAll(['name', 'age', 'gender', 'status', 'availability', 'createdAt']) &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
+             data.age is number && data.age >= 0 &&
+             data.gender in ['male', 'female'] &&
+             data.status in ['working', 'waiting', 'resting'] &&
+             data.availability is bool &&
+             (!('membershipPaid' in data) || data.membershipPaid is bool) &&
+             data.createdAt is timestamp;
+    }
+
+    function isValidMatching(data) {
+      return data.keys().hasAll(['patientId', 'caregiverId', 'status', 'startDate', 'createdAt']) &&
+             data.patientId is string &&
+             data.caregiverId is string &&
+             data.status in ['active', 'completed', 'cancelled'] &&
+             isValidDateString(data.startDate) &&
+             data.createdAt is timestamp;
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow create: if isOwner(userId) && isValidUser(request.resource.data);
+      allow update: if isOwner(userId) && isValidUser(request.resource.data) && 
+                      request.resource.data.role == resource.data.role; // Cannot change role
+    }
+
+    match /patients/{patientId} {
+      allow read, write: if isAdmin();
+      allow create: if isAdmin() && isValidPatient(request.resource.data);
+      allow update: if isAdmin() && isValidPatient(request.resource.data);
+    }
+
+    match /caregivers/{caregiverId} {
+      allow read, write: if isAdmin();
+      allow create: if isAdmin() && isValidCaregiver(request.resource.data);
+      allow update: if isAdmin() && isValidCaregiver(request.resource.data);
+    }
+
+    match /matchings/{matchingId} {
+      allow read, write: if isAdmin();
+      allow create: if isAdmin() && isValidMatching(request.resource.data);
+      allow update: if isAdmin() && isValidMatching(request.resource.data);
+    }
+  }
+}
