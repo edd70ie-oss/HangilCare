@@ -11,7 +11,15 @@ import {
   Timestamp,
   getDocFromServer
 } from 'firebase/firestore';
-import { onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut, User as FirebaseUser } from 'firebase/auth';
+import { 
+  onAuthStateChanged, 
+  signInWithPopup, 
+  GoogleAuthProvider, 
+  signOut, 
+  User as FirebaseUser,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword
+} from 'firebase/auth';
 import { auth, db, handleFirestoreError, OperationType } from './firebase';
 import { 
   BarChart, 
@@ -96,6 +104,11 @@ export default function App() {
   const [modalType, setModalType] = useState<'patient' | 'caregiver' | 'matching'>('patient');
   const [editingId, setEditingId] = useState<string | null>(null);
 
+  // Login states
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [isSignUp, setIsSignUp] = useState(false);
+
   // Auth
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (u) => {
@@ -150,13 +163,32 @@ export default function App() {
     };
   }, [user]);
 
-  const handleLogin = async () => {
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      if (isSignUp) {
+        await createUserWithEmailAndPassword(auth, email, password);
+      } else {
+        await signInWithEmailAndPassword(auth, email, password);
+      }
+    } catch (error: any) {
+      console.error("Auth failed", error);
+      let message = "로그인에 실패했습니다.";
+      if (error.code === 'auth/user-not-found') message = "등록되지 않은 이메일입니다.";
+      if (error.code === 'auth/wrong-password') message = "비밀번호가 틀렸습니다.";
+      if (error.code === 'auth/email-already-in-use') message = "이미 사용 중인 이메일입니다.";
+      if (error.code === 'auth/weak-password') message = "비밀번호는 6자리 이상이어야 합니다.";
+      alert(message);
+    }
+  };
+
+  const handleGoogleLogin = async () => {
     try {
       const provider = new GoogleAuthProvider();
       await signInWithPopup(auth, provider);
     } catch (error: any) {
-      console.error("Login failed", error);
-      alert(`로그인 실패: ${error.message}\n(에러 코드: ${error.code})`);
+      console.error("Google login failed", error);
+      alert(`구글 로그인 실패: ${error.message}`);
     }
   };
 
@@ -173,21 +205,70 @@ export default function App() {
   if (!user) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-zinc-50 p-4">
-        <div className="max-w-md w-full bg-white p-8 rounded-2xl shadow-sm border border-zinc-200 text-center">
-          <div className="w-16 h-16 bg-zinc-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
-            <svg className="w-8 h-8 text-zinc-900" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-            </svg>
+        <div className="max-w-md w-full bg-white p-8 rounded-2xl shadow-sm border border-zinc-200">
+          <div className="text-center mb-8">
+            <div className="w-16 h-16 bg-zinc-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
+              <svg className="w-8 h-8 text-zinc-900" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+              </svg>
+            </div>
+            <h1 className="text-2xl font-bold text-zinc-900 mb-2">CareMatch Admin</h1>
+            <p className="text-zinc-600">관리자 전용 시스템입니다. {isSignUp ? '계정을 생성하세요.' : '로그인하세요.'}</p>
           </div>
-          <h1 className="text-2xl font-bold text-zinc-900 mb-2">CareMatch Admin</h1>
-          <p className="text-zinc-600 mb-8">관리자 전용 간병인 매칭 시스템입니다. 계속하려면 로그인하세요.</p>
-          <button
-            onClick={handleLogin}
-            className="w-full flex items-center justify-center gap-3 py-3 px-4 bg-white border border-zinc-200 rounded-xl font-medium text-zinc-700 hover:bg-zinc-50 transition-colors shadow-sm"
-          >
-            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" className="w-5 h-5" alt="Google" />
-            Google로 로그인
-          </button>
+
+          <form onSubmit={handleLogin} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-zinc-700 mb-1">이메일</label>
+              <input
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full px-4 py-2.5 rounded-xl border border-zinc-200 focus:outline-none focus:ring-2 focus:ring-zinc-900/10 transition-all"
+                placeholder="admin@example.com"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-zinc-700 mb-1">비밀번호</label>
+              <input
+                type="password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full px-4 py-2.5 rounded-xl border border-zinc-200 focus:outline-none focus:ring-2 focus:ring-zinc-900/10 transition-all"
+                placeholder="••••••••"
+              />
+            </div>
+            <button
+              type="submit"
+              className="w-full py-3 px-4 bg-zinc-900 text-white rounded-xl font-medium hover:bg-zinc-800 transition-colors shadow-sm"
+            >
+              {isSignUp ? '가입하기' : '로그인'}
+            </button>
+          </form>
+
+          <div className="mt-6 pt-6 border-t border-zinc-100 text-center">
+            <button
+              onClick={() => setIsSignUp(!isSignUp)}
+              className="text-sm text-zinc-500 hover:text-zinc-900 transition-colors"
+            >
+              {isSignUp ? '이미 계정이 있으신가요? 로그인' : '처음이신가요? 계정 생성'}
+            </button>
+          </div>
+
+          <div className="mt-4">
+            <div className="relative flex items-center justify-center mb-4">
+              <div className="border-t border-zinc-100 w-full"></div>
+              <span className="bg-white px-3 text-xs text-zinc-400 absolute">또는</span>
+            </div>
+            <button
+              onClick={handleGoogleLogin}
+              className="w-full flex items-center justify-center gap-3 py-3 px-4 bg-white border border-zinc-200 rounded-xl font-medium text-zinc-700 hover:bg-zinc-50 transition-colors shadow-sm"
+            >
+              <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" className="w-5 h-5" alt="Google" />
+              Google로 계속하기
+            </button>
+          </div>
         </div>
       </div>
     );
