@@ -56,6 +56,7 @@ export interface Patient {
   condition?: string;
   ward?: string;
   guardianContact?: string;
+  careFee?: number;
   careFeePaid?: boolean;
   notes?: string;
   createdAt: any;
@@ -426,6 +427,9 @@ export default function App() {
                     <div className="space-y-1 mb-4">
                       <p className="text-xs text-zinc-500 flex items-center gap-1">
                         <span className="font-bold text-zinc-700">보호자:</span> {p.guardianContact || '정보 없음'}
+                      </p>
+                      <p className="text-xs text-zinc-500 flex items-center gap-1">
+                        <span className="font-bold text-zinc-700">간병료:</span> {p.careFee ? `${p.careFee.toLocaleString()}원` : '정보 없음'}
                       </p>
                       {activeMatching && (
                         <p className="text-xs text-blue-600 flex items-center gap-1">
@@ -959,6 +963,7 @@ function Modal({ type, editingId, onClose, patients, caregivers, matchings }: an
                 <Input label="상태 (질환 등)" value={formData.condition || ''} onChange={(v: string) => setFormData({...formData, condition: v})} />
                 <Input label="병실" value={formData.ward || ''} onChange={(v: string) => setFormData({...formData, ward: v})} placeholder="예: 301호" />
                 <Input label="보호자 연락처" value={formData.guardianContact || ''} onChange={(v: string) => setFormData({...formData, guardianContact: formatPhoneNumber(v)})} placeholder="010-0000-0000" />
+                <Input label="간병료 (원)" type="number" value={formData.careFee || ''} onChange={(v: string) => setFormData({...formData, careFee: Number(v)})} placeholder="예: 150000" />
                 <div className="flex items-center gap-2 py-2">
                   <input type="checkbox" id="carePaid" checked={formData.careFeePaid} onChange={e => setFormData({...formData, careFeePaid: e.target.checked})} className="w-5 h-5 rounded border-zinc-300 text-zinc-900 focus:ring-zinc-900" />
                   <label htmlFor="carePaid" className="text-sm font-medium">간병비 납부 여부</label>
