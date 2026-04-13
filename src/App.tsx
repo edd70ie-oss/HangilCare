@@ -390,6 +390,7 @@ export default function App() {
                 setModalType('caregiver');
                 setShowModal(true);
               }}
+              onTabChange={setActiveTab}
             />
           )}
 
@@ -704,13 +705,15 @@ function DashboardView({
   caregivers, 
   matchings, 
   onViewAll,
-  onEditCaregiver 
+  onEditCaregiver,
+  onTabChange
 }: { 
   patients: Patient[], 
   caregivers: Caregiver[], 
   matchings: Matching[], 
   onViewAll: () => void,
-  onEditCaregiver: (id: string) => void
+  onEditCaregiver: (id: string) => void,
+  onTabChange: (tab: 'dashboard' | 'patients' | 'caregivers' | 'matchings' | 'admins') => void
 }) {
   const activeMatchings = matchings.filter(m => m.status === 'active').length;
   const completedMatchings = matchings.filter(m => m.status === 'completed').length;
@@ -746,6 +749,7 @@ function DashboardView({
           value={patients.length} 
           trend={`${patientPaidCount}명 납부`}
           color="bg-blue-50 text-blue-600"
+          onClick={() => onTabChange('patients')}
         />
         <StatCard 
           icon={<Users className="w-5 h-5" />} 
@@ -753,6 +757,7 @@ function DashboardView({
           value={caregivers.length} 
           trend={`${caregiverPaidCount}명 납부`}
           color="bg-emerald-50 text-emerald-600"
+          onClick={() => onTabChange('caregivers')}
         />
         <StatCard 
           icon={<Handshake className="w-5 h-5" />} 
@@ -760,6 +765,7 @@ function DashboardView({
           value={activeMatchings} 
           trend="현재 활동"
           color="bg-orange-50 text-orange-600"
+          onClick={() => onTabChange('matchings')}
         />
         <StatCard 
           icon={<TrendingUp className="w-5 h-5" />} 
@@ -767,6 +773,7 @@ function DashboardView({
           value={matchings.length} 
           trend="전체 기록"
           color="bg-purple-50 text-purple-600"
+          onClick={() => onTabChange('matchings')}
         />
       </div>
 
@@ -871,9 +878,12 @@ function DashboardView({
   );
 }
 
-function StatCard({ icon, label, value, trend, color }: { icon: any, label: string, value: number, trend: string, color: string }) {
+function StatCard({ icon, label, value, trend, color, onClick }: { icon: any, label: string, value: number, trend: string, color: string, onClick?: () => void }) {
   return (
-    <div className="bg-white p-4 sm:p-6 rounded-2xl border border-zinc-200 shadow-sm">
+    <button 
+      onClick={onClick}
+      className={`bg-white p-4 sm:p-6 rounded-2xl border border-zinc-200 shadow-sm flex flex-col text-left transition-all ${onClick ? 'hover:border-zinc-400 hover:shadow-md active:scale-[0.98]' : ''}`}
+    >
       <div className="flex items-center justify-between mb-3 sm:mb-4">
         <div className={`p-2 rounded-xl ${color}`}>
           {icon}
@@ -882,7 +892,7 @@ function StatCard({ icon, label, value, trend, color }: { icon: any, label: stri
       </div>
       <p className="text-xs sm:text-sm font-medium text-zinc-500 mb-1 truncate">{label}</p>
       <p className="text-xl sm:text-3xl font-bold tracking-tight">{value.toLocaleString()}</p>
-    </div>
+    </button>
   );
 }
 
