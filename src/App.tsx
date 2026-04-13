@@ -419,7 +419,7 @@ export default function App() {
           )}
 
           {activeTab === 'patients' && (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
               {patients.map(p => {
                 const activeMatching = matchings.find(m => m.patientId === p.id && m.status === 'active');
                 return (
@@ -464,7 +464,7 @@ export default function App() {
           )}
 
           {activeTab === 'caregivers' && (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
               {caregivers.map(c => (
                 <Card key={c.id} title={c.name} subtitle={`${c.age}세 · ${c.gender === 'male' ? '남성' : '여성'}`}>
                   <div className="flex flex-wrap gap-2 mb-4">
@@ -739,7 +739,7 @@ function DashboardView({
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <StatCard 
           icon={<UserRound className="w-5 h-5" />} 
           label="전체 환자" 
@@ -777,7 +777,7 @@ function DashboardView({
             <h3 className="text-lg font-bold">최근 매칭 내역</h3>
             <button onClick={onViewAll} className="text-sm font-medium text-blue-600 hover:underline">전체 보기</button>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
             {recentMatchings.length === 0 ? (
               <p className="text-sm text-zinc-500 text-center py-8 col-span-full">최근 내역이 없습니다.</p>
             ) : (
@@ -785,7 +785,7 @@ function DashboardView({
                 const patient = patients.find(p => p.id === m.patientId);
                 const caregiver = caregivers.find(c => c.id === m.caregiverId);
                 return (
-                  <div key={m.id} className="flex items-start gap-4 p-4 rounded-xl bg-zinc-50 hover:bg-zinc-100 transition-colors">
+                  <div key={m.id} className="flex items-start gap-2 sm:gap-4 p-3 sm:p-4 rounded-xl bg-zinc-50 hover:bg-zinc-100 transition-colors">
                     <div className={`p-2 rounded-lg ${
                       m.status === 'active' ? 'bg-blue-100 text-blue-600' : 
                       m.status === 'completed' ? 'bg-zinc-200 text-zinc-500' : 'bg-red-100 text-red-600'
@@ -873,24 +873,24 @@ function DashboardView({
 
 function StatCard({ icon, label, value, trend, color }: { icon: any, label: string, value: number, trend: string, color: string }) {
   return (
-    <div className="bg-white p-6 rounded-2xl border border-zinc-200 shadow-sm">
-      <div className="flex items-center justify-between mb-4">
-        <div className={`p-2.5 rounded-xl ${color}`}>
+    <div className="bg-white p-4 sm:p-6 rounded-2xl border border-zinc-200 shadow-sm">
+      <div className="flex items-center justify-between mb-3 sm:mb-4">
+        <div className={`p-2 rounded-xl ${color}`}>
           {icon}
         </div>
-        <span className="text-xs font-medium text-zinc-400">{trend}</span>
+        <span className="text-[10px] sm:text-xs font-medium text-zinc-400 truncate ml-1">{trend}</span>
       </div>
-      <p className="text-sm font-medium text-zinc-500 mb-1">{label}</p>
-      <p className="text-3xl font-bold tracking-tight">{value.toLocaleString()}</p>
+      <p className="text-xs sm:text-sm font-medium text-zinc-500 mb-1 truncate">{label}</p>
+      <p className="text-xl sm:text-3xl font-bold tracking-tight">{value.toLocaleString()}</p>
     </div>
   );
 }
 
 function Card({ title, subtitle, children, ...props }: { title: string, subtitle: string, children: any, [key: string]: any }) {
   return (
-    <div className="bg-white p-6 rounded-2xl border border-zinc-200 shadow-sm flex flex-col hover:border-zinc-300 transition-colors">
-      <h3 className="text-lg font-bold mb-1">{title}</h3>
-      <p className="text-sm text-zinc-400 mb-4">{subtitle}</p>
+    <div className="bg-white p-4 sm:p-6 rounded-2xl border border-zinc-200 shadow-sm flex flex-col hover:border-zinc-300 transition-colors">
+      <h3 className="text-base sm:text-lg font-bold mb-0.5 sm:mb-1 truncate">{title}</h3>
+      <p className="text-[11px] sm:text-sm text-zinc-400 mb-3 sm:mb-4 truncate">{subtitle}</p>
       {children}
     </div>
   );
