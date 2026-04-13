@@ -820,7 +820,9 @@ function AdminManagementView({ admins }: { admins: AdminUser[] }) {
     setIsAdding(true);
     try {
       // Add to 'users' collection with 'admin' role
+      // We use the email as a temporary UID or a placeholder since we don't have the actual UID yet
       await addDoc(collection(db, 'users'), {
+        uid: `invited_${newAdminEmail}`, // Placeholder UID for invited admins
         email: newAdminEmail,
         role: 'admin',
         createdAt: Timestamp.now()
@@ -837,48 +839,67 @@ function AdminManagementView({ admins }: { admins: AdminUser[] }) {
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="bg-white p-8 rounded-3xl border border-zinc-200 shadow-sm">
-        <h3 className="text-xl font-bold mb-6">관리자 추가</h3>
+        <h3 className="text-xl font-bold mb-2">관리자 추가</h3>
         <p className="text-sm text-zinc-500 mb-6">
           새로운 관리자의 이메일을 입력하세요. 추가된 사용자는 Google 로그인 시 관리자 권한을 갖게 됩니다.
         </p>
-        <form onSubmit={handleAddAdmin} className="flex gap-3">
-          <input 
-            type="email" 
-            placeholder="admin@example.com"
-            value={newAdminEmail}
-            onChange={e => setNewAdminEmail(e.target.value)}
-            className="flex-1 px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-zinc-900/5 focus:border-zinc-900 transition-all"
-            required
-          />
+        <form onSubmit={handleAddAdmin} className="flex flex-col gap-4">
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold uppercase tracking-wider text-zinc-500">이메일 주소</label>
+            <input 
+              type="email" 
+              placeholder="admin@example.com"
+              value={newAdminEmail}
+              onChange={e => setNewAdminEmail(e.target.value)}
+              className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-zinc-900/5 focus:border-zinc-900 transition-all"
+              required
+            />
+          </div>
           <button 
             type="submit"
             disabled={isAdding}
-            className="px-6 py-3 bg-zinc-900 text-white rounded-xl font-medium hover:bg-zinc-800 transition-colors disabled:opacity-50"
+            className="w-full sm:w-auto px-8 py-3 bg-zinc-900 text-white rounded-xl font-bold hover:bg-zinc-800 transition-colors disabled:opacity-50 shadow-lg shadow-zinc-900/10"
           >
-            추가하기
+            {isAdding ? '추가 중...' : '관리자 추가하기'}
           </button>
         </form>
       </div>
 
       <div className="bg-white rounded-3xl border border-zinc-200 shadow-sm overflow-hidden">
-        <div className="px-8 py-6 border-b border-zinc-100">
+        <div className="px-8 py-6 border-b border-zinc-100 bg-zinc-50/30">
           <h3 className="text-xl font-bold">현재 관리자 목록</h3>
         </div>
         <div className="divide-y divide-zinc-50">
-          {admins.map(admin => (
-            <div key={admin.id} className="px-8 py-4 flex items-center justify-between hover:bg-zinc-50/50 transition-colors">
+          {/* Default Admin Display (Always first) */}
+          <div className="px-8 py-5 flex items-center justify-between bg-zinc-50/50">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-zinc-900 rounded-2xl flex items-center justify-center text-white font-bold shadow-inner">
+                E
+              </div>
+              <div>
+                <p className="font-bold text-zinc-900">edd70ie@gmail.com</p>
+                <p className="text-xs text-zinc-500 font-medium">시스템 기본 관리자 (Super Admin)</p>
+              </div>
+            </div>
+            <span className="hidden sm:inline-block px-3 py-1 bg-zinc-900 text-white rounded-lg text-[10px] font-black uppercase tracking-widest">
+              SUPER
+            </span>
+          </div>
+
+          {admins.filter(a => a.email !== 'edd70ie@gmail.com').map(admin => (
+            <div key={admin.id} className="px-8 py-5 flex items-center justify-between hover:bg-zinc-50/30 transition-colors">
               <div className="flex items-center gap-4">
-                <div className="w-10 h-10 bg-zinc-100 rounded-full flex items-center justify-center text-zinc-500 font-bold">
+                <div className="w-12 h-12 bg-zinc-100 rounded-2xl flex items-center justify-center text-zinc-400 font-bold border border-zinc-200">
                   {admin.email ? admin.email[0].toUpperCase() : '?'}
                 </div>
                 <div>
-                  <p className="font-medium">{admin.email}</p>
-                  <p className="text-xs text-zinc-400">ID: {admin.id}</p>
+                  <p className="font-bold text-zinc-900">{admin.email}</p>
+                  <p className="text-[10px] text-zinc-400 font-mono">ID: {admin.id}</p>
                 </div>
               </div>
-              <div className="flex items-center gap-3">
-                <span className="px-3 py-1 bg-zinc-100 text-zinc-600 rounded-full text-xs font-bold uppercase">
-                  {admin.role}
+              <div className="flex items-center gap-4">
+                <span className="px-3 py-1 bg-blue-50 text-blue-700 rounded-lg text-[10px] font-black uppercase tracking-widest">
+                  ADMIN
                 </span>
                 <button 
                   onClick={async () => {
@@ -890,28 +911,20 @@ function AdminManagementView({ admins }: { admins: AdminUser[] }) {
                       }
                     }
                   }}
-                  className="p-2 text-zinc-400 hover:text-red-500 transition-colors"
+                  className="p-2 text-zinc-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"
+                  title="관리자 삭제"
                 >
-                  <XCircle className="w-5 h-5" />
+                  <XCircle className="w-6 h-6" />
                 </button>
               </div>
             </div>
           ))}
-          {/* Default Admin Display */}
-          <div className="px-8 py-4 flex items-center justify-between bg-zinc-50/30">
-            <div className="flex items-center gap-4">
-              <div className="w-10 h-10 bg-zinc-900 rounded-full flex items-center justify-center text-white font-bold">
-                E
-              </div>
-              <div>
-                <p className="font-medium">edd70ie@gmail.com</p>
-                <p className="text-xs text-zinc-400 italic">시스템 기본 관리자</p>
-              </div>
+          
+          {admins.filter(a => a.email !== 'edd70ie@gmail.com').length === 0 && (
+            <div className="px-8 py-12 text-center">
+              <p className="text-zinc-400 text-sm">추가된 관리자가 없습니다.</p>
             </div>
-            <span className="px-3 py-1 bg-zinc-900 text-white rounded-full text-xs font-bold uppercase">
-              Super Admin
-            </span>
-          </div>
+          )}
         </div>
       </div>
     </div>
