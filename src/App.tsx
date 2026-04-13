@@ -44,8 +44,13 @@ import {
   TrendingUp,
   Calendar,
   ChevronDown,
-  LayoutDashboard
+  LayoutDashboard,
+  Download,
+  Search,
+  LayoutGrid,
+  List
 } from 'lucide-react';
+import * as XLSX from 'xlsx';
 
 // Types
 export interface Patient {
@@ -113,6 +118,83 @@ export default function App() {
   const [password, setPassword] = useState('');
   const [isSignUp, setIsSignUp] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [viewMode, setViewMode] = useState<'card' | 'list'>('card');
+
+  useEffect(() => {
+    setSearchQuery('');
+  }, [activeTab]);
+
+  const filteredPatients = patients.filter(p => 
+    p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (p.condition && p.condition.toLowerCase().includes(searchQuery.toLowerCase())) ||
+    (p.ward && p.ward.toLowerCase().includes(searchQuery.toLowerCase()))
+  );
+
+  const filteredCaregivers = caregivers.filter(c => 
+    c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (c.specialties && c.specialties.toLowerCase().includes(searchQuery.toLowerCase()))
+  );
+
+  const filteredMatchings = matchings.filter(m => {
+    const patient = patients.find(p => p.id === m.patientId);
+    const caregiver = caregivers.find(c => c.id === m.caregiverId);
+    const searchLower = searchQuery.toLowerCase();
+    return (patient?.name.toLowerCase().includes(searchLower) || 
+            caregiver?.name.toLowerCase().includes(searchLower));
+  });
+
+  const handleExportExcel = () => {
+    let dataToExport: any[] = [];
+    let fileName = '';
+
+    if (activeTab === 'patients') {
+      dataToExport = filteredPatients.map(p => ({
+        '이름': p.name,
+        '나이': p.age,
+        '성별': p.gender === 'male' ? '남성' : '여성',
+        '상태': p.condition || '',
+        '병실': p.ward || '',
+        '보호자연락처': p.guardianContact || '',
+        '간병료': p.careFee || 0,
+        '납부여부': p.careFeePaid ? '완료' : '미납',
+        '메모': p.notes || ''
+      }));
+      fileName = '환자목록.xlsx';
+    } else if (activeTab === 'caregivers') {
+      dataToExport = filteredCaregivers.map(c => ({
+        '이름': c.name,
+        '나이': c.age,
+        '성별': c.gender === 'male' ? '남성' : '여성',
+        '상태': c.status === 'working' ? '일하고 있음' : c.status === 'waiting' ? '대기 중' : '쉬는 중',
+        '경력': c.experience || '',
+        '전문분야': c.specialties || '',
+        '연락처': c.contact || '',
+        '매칭가능': c.availability ? '가능' : '불가능',
+        '회비납부': c.membershipPaid ? '완료' : '미납'
+      }));
+      fileName = '간병인목록.xlsx';
+    } else if (activeTab === 'matchings') {
+      dataToExport = filteredMatchings.map(m => {
+        const patient = patients.find(p => p.id === m.patientId);
+        const caregiver = caregivers.find(c => c.id === m.caregiverId);
+        return {
+          '환자이름': patient?.name || '삭제됨',
+          '병실': patient?.ward || '-',
+          '간병인이름': caregiver?.name || '삭제됨',
+          '간병비': m.careFee || patient?.careFee || 0,
+          '상태': m.status === 'active' ? '진행 중' : m.status === 'completed' ? '완료' : '취소',
+          '시작일': m.startDate
+        };
+      });
+      fileName = '매칭목록.xlsx';
+    }
+
+    const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Data");
+    XLSX.writeFile(workbook, fileName);
+  };
 
   // Auth
   useEffect(() => {
@@ -399,104 +481,221 @@ export default function App() {
           )}
 
           {activeTab !== 'dashboard' && activeTab !== 'admins' && (
-            <div className="flex items-center justify-between">
-              <h2 className="text-2xl font-bold">
-                {activeTab === 'patients' ? '환자 목록' : activeTab === 'caregivers' ? '간병인 목록' : '매칭 목록'}
-              </h2>
-              <button 
-                onClick={() => {
-                  setModalType(activeTab === 'matchings' ? 'matching' : activeTab === 'patients' ? 'patient' : 'caregiver');
-                  setEditingId(null);
-                  setShowModal(true);
-                }}
-                className="flex items-center gap-2 px-4 py-2 bg-zinc-900 text-white rounded-xl text-sm font-medium hover:bg-zinc-800 transition-colors"
-              >
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                </svg>
-                추가하기
-              </button>
+            <div className="space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+                <h2 className="text-xl sm:text-2xl font-bold whitespace-nowrap">
+                  {activeTab === 'patients' ? '환자 목록' : activeTab === 'caregivers' ? '간병인 목록' : '매칭 목록'}
+                </h2>
+                <div className="flex gap-2 w-full sm:w-auto">
+                  {(activeTab === 'patients' || activeTab === 'caregivers') && (
+                    <div className="flex bg-zinc-100 p-1 rounded-xl mr-2">
+                      <button 
+                        onClick={() => setViewMode('card')}
+                        className={`p-1.5 rounded-lg transition-all ${viewMode === 'card' ? 'bg-white shadow-sm text-zinc-900' : 'text-zinc-400'}`}
+                      >
+                        <LayoutGrid className="w-4 h-4" />
+                      </button>
+                      <button 
+                        onClick={() => setViewMode('list')}
+                        className={`p-1.5 rounded-lg transition-all ${viewMode === 'list' ? 'bg-white shadow-sm text-zinc-900' : 'text-zinc-400'}`}
+                      >
+                        <List className="w-4 h-4" />
+                      </button>
+                    </div>
+                  )}
+                  {(activeTab === 'patients' || activeTab === 'caregivers' || activeTab === 'matchings') && (
+                    <button 
+                      onClick={handleExportExcel}
+                      className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-2.5 sm:px-4 sm:py-2 bg-white border border-zinc-200 text-zinc-600 rounded-xl text-xs sm:text-sm font-bold sm:font-medium hover:bg-zinc-50 transition-colors whitespace-nowrap"
+                    >
+                      <Download className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                      엑셀 저장
+                    </button>
+                  )}
+                  <button 
+                    onClick={() => {
+                      setModalType(activeTab === 'matchings' ? 'matching' : activeTab === 'patients' ? 'patient' : 'caregiver');
+                      setEditingId(null);
+                      setShowModal(true);
+                    }}
+                    className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-2.5 sm:px-4 sm:py-2 bg-zinc-900 text-white rounded-xl text-xs sm:text-sm font-bold sm:font-medium hover:bg-zinc-800 transition-colors whitespace-nowrap"
+                  >
+                    <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                    </svg>
+                    추가하기
+                  </button>
+                </div>
+              </div>
+
+              {/* Search Bar */}
+              <div className="relative">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
+                <input 
+                  type="text"
+                  placeholder={activeTab === 'matchings' ? "환자 또는 간병인 이름으로 검색..." : "이름으로 검색..."}
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-11 pr-4 py-3 bg-white border border-zinc-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-zinc-900/5 focus:border-zinc-900 transition-all shadow-sm"
+                />
+              </div>
             </div>
           )}
 
           {activeTab === 'patients' && (
-            <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-              {patients.map(p => {
-                const activeMatching = matchings.find(m => m.patientId === p.id && m.status === 'active');
-                return (
-                  <Card key={p.id} title={p.name} subtitle={`${p.age}세 · ${p.gender === 'male' ? '남성' : '여성'}`}>
-                    <p className="text-sm text-zinc-600 mb-2 line-clamp-2">{p.condition || '상태 정보 없음'}</p>
-                    <div className="space-y-1 mb-4">
-                      <p className="text-xs text-zinc-500 flex items-center gap-1">
-                        <span className="font-bold text-zinc-700">보호자:</span> {p.guardianContact || '정보 없음'}
-                      </p>
-                      <p className="text-xs text-zinc-500 flex items-center gap-1">
-                        <span className="font-bold text-zinc-700">간병료:</span> {p.careFee ? `${p.careFee.toLocaleString()}원` : '정보 없음'}
-                      </p>
-                      {activeMatching && (
-                        <p className="text-xs text-blue-600 flex items-center gap-1">
-                          <span className="font-bold">간병 시작:</span> {activeMatching.startDate}
+            viewMode === 'card' ? (
+              <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+                {filteredPatients.map(p => {
+                  const activeMatching = matchings.find(m => m.patientId === p.id && m.status === 'active');
+                  return (
+                    <Card key={p.id} title={p.name} subtitle={`${p.age}세 · ${p.gender === 'male' ? '남성' : '여성'}`}>
+                      <p className="text-sm text-zinc-600 mb-2 line-clamp-2">{p.condition || '상태 정보 없음'}</p>
+                      <div className="space-y-1 mb-4">
+                        <p className="text-xs text-zinc-500 flex items-center gap-1">
+                          <span className="font-bold text-zinc-700">보호자:</span> {p.guardianContact || '정보 없음'}
                         </p>
-                      )}
-                      <div className="mt-1">
-                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${p.careFeePaid ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700'}`}>
-                          {p.careFeePaid ? '간병비 납부' : '간병비 미납'}
-                        </span>
-                      </div>
-                      {p.notes && (
-                        <div className="mt-2 p-2 bg-zinc-50 rounded-lg border border-zinc-100">
-                          <p className="text-[11px] text-zinc-500 leading-relaxed italic">
-                            "{p.notes}"
+                        <p className="text-xs text-zinc-500 flex items-center gap-1">
+                          <span className="font-bold text-zinc-700">간병료:</span> {p.careFee ? `${p.careFee.toLocaleString()}원` : '정보 없음'}
+                        </p>
+                        {activeMatching && (
+                          <p className="text-xs text-blue-600 flex items-center gap-1">
+                            <span className="font-bold">간병 시작:</span> {activeMatching.startDate}
                           </p>
+                        )}
+                        <div className="mt-1">
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${p.careFeePaid ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700'}`}>
+                            {p.careFeePaid ? '간병비 납부' : '간병비 미납'}
+                          </span>
                         </div>
-                      )}
+                        {p.notes && (
+                          <div className="mt-2 p-2 bg-zinc-50 rounded-lg border border-zinc-100">
+                            <p className="text-[11px] text-zinc-500 leading-relaxed italic">
+                              "{p.notes}"
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex items-center justify-between mt-auto pt-4 border-t border-zinc-100">
+                        <span className="text-xs text-zinc-400">{p.ward ? `${p.ward} 병실` : '병실 미지정'}</span>
+                        <button 
+                          onClick={() => { setEditingId(p.id); setModalType('patient'); setShowModal(true); }}
+                          className="text-xs font-medium text-zinc-900 hover:underline"
+                        >수정</button>
+                      </div>
+                    </Card>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="bg-white rounded-2xl border border-zinc-200 shadow-sm divide-y divide-zinc-100">
+                {filteredPatients.map(p => (
+                  <div key={p.id} className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-zinc-50/50 transition-colors">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 flex-1 gap-3 sm:gap-4">
+                      <div className="flex flex-col">
+                        <span className="text-[10px] font-bold text-zinc-400 uppercase mb-0.5">이름</span>
+                        <span className="font-bold text-zinc-900">{p.name}</span>
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-[10px] font-bold text-zinc-400 uppercase mb-0.5">나이/성별</span>
+                        <span className="text-sm text-zinc-600">{p.age}세 / {p.gender === 'male' ? '남' : '여'}</span>
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-[10px] font-bold text-zinc-400 uppercase mb-0.5">병실</span>
+                        <span className="text-sm text-zinc-600">{p.ward || '-'}</span>
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-[10px] font-bold text-zinc-400 uppercase mb-0.5">간병료</span>
+                        <span className="text-sm font-bold text-zinc-900">{p.careFee ? `${p.careFee.toLocaleString()}원` : '-'}</span>
+                      </div>
                     </div>
-                    <div className="flex items-center justify-between mt-auto pt-4 border-t border-zinc-100">
-                      <span className="text-xs text-zinc-400">{p.ward ? `${p.ward} 병실` : '병실 미지정'}</span>
+                    <div className="flex items-center justify-between sm:justify-end gap-4 pt-3 sm:pt-0 border-t sm:border-t-0 border-zinc-50">
+                      <span className={`px-2 py-1 rounded-lg text-[10px] font-bold uppercase ${p.careFeePaid ? 'bg-blue-50 text-blue-700' : 'bg-amber-50 text-amber-700'}`}>
+                        {p.careFeePaid ? '납부 완료' : '미납'}
+                      </span>
                       <button 
                         onClick={() => { setEditingId(p.id); setModalType('patient'); setShowModal(true); }}
+                        className="text-xs font-bold text-zinc-900 px-4 py-2 bg-zinc-100 rounded-xl hover:bg-zinc-200 transition-colors"
+                      >수정</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )
+          )}
+
+          {activeTab === 'caregivers' && (
+            viewMode === 'card' ? (
+              <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+                {filteredCaregivers.map(c => (
+                  <Card key={c.id} title={c.name} subtitle={`${c.age}세 · ${c.gender === 'male' ? '남성' : '여성'}`}>
+                    <div className="flex flex-wrap gap-2 mb-4">
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
+                        c.status === 'working' ? 'bg-blue-100 text-blue-700' : 
+                        c.status === 'waiting' ? 'bg-emerald-100 text-emerald-700' : 'bg-zinc-100 text-zinc-500'
+                      }`}>
+                        {c.status === 'working' ? '일하고 있음' : c.status === 'waiting' ? '대기 중' : '쉬는 중'}
+                      </span>
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${c.membershipPaid ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700'}`}>
+                        {c.membershipPaid ? '회비 납부' : '회비 미납'}
+                      </span>
+                    </div>
+                    <p className="text-sm text-zinc-600 mb-4 line-clamp-2">{c.specialties || '전문 분야 정보 없음'}</p>
+                    <div className="flex items-center justify-between mt-auto pt-4 border-t border-zinc-100">
+                      <span className="text-xs text-zinc-400">{c.contact || '연락처 없음'}</span>
+                      <button 
+                        onClick={() => { setEditingId(c.id); setModalType('caregiver'); setShowModal(true); }}
                         className="text-xs font-medium text-zinc-900 hover:underline"
                       >수정</button>
                     </div>
                   </Card>
-                );
-              })}
-            </div>
-          )}
-
-          {activeTab === 'caregivers' && (
-            <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-              {caregivers.map(c => (
-                <Card key={c.id} title={c.name} subtitle={`${c.age}세 · ${c.gender === 'male' ? '남성' : '여성'}`}>
-                  <div className="flex flex-wrap gap-2 mb-4">
-                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
-                      c.status === 'working' ? 'bg-blue-100 text-blue-700' : 
-                      c.status === 'waiting' ? 'bg-emerald-100 text-emerald-700' : 'bg-zinc-100 text-zinc-500'
-                    }`}>
-                      {c.status === 'working' ? '일하고 있음' : c.status === 'waiting' ? '대기 중' : '쉬는 중'}
-                    </span>
-                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${c.membershipPaid ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700'}`}>
-                      {c.membershipPaid ? '회비 납부' : '회비 미납'}
-                    </span>
+                ))}
+              </div>
+            ) : (
+              <div className="bg-white rounded-2xl border border-zinc-200 shadow-sm divide-y divide-zinc-100">
+                {filteredCaregivers.map(c => (
+                  <div key={c.id} className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-zinc-50/50 transition-colors">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 flex-1 gap-3 sm:gap-4">
+                      <div className="flex flex-col">
+                        <span className="text-[10px] font-bold text-zinc-400 uppercase mb-0.5">이름</span>
+                        <span className="font-bold text-zinc-900">{c.name}</span>
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-[10px] font-bold text-zinc-400 uppercase mb-0.5">나이/성별</span>
+                        <span className="text-sm text-zinc-600">{c.age}세 / {c.gender === 'male' ? '남' : '여'}</span>
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-[10px] font-bold text-zinc-400 uppercase mb-0.5">연락처</span>
+                        <span className="text-sm text-zinc-600">{c.contact || '-'}</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between sm:justify-end gap-4 pt-3 sm:pt-0 border-t sm:border-t-0 border-zinc-50">
+                      <div className="flex gap-2">
+                        <span className={`px-2 py-1 rounded-lg text-[10px] font-bold uppercase ${
+                          c.status === 'working' ? 'bg-blue-50 text-blue-700' : 
+                          c.status === 'waiting' ? 'bg-emerald-50 text-emerald-700' : 'bg-zinc-50 text-zinc-500'
+                        }`}>
+                          {c.status === 'working' ? '근무중' : c.status === 'waiting' ? '대기중' : '휴식중'}
+                        </span>
+                        <span className={`px-2 py-1 rounded-lg text-[10px] font-bold uppercase ${c.membershipPaid ? 'bg-blue-50 text-blue-700' : 'bg-amber-50 text-amber-700'}`}>
+                          {c.membershipPaid ? '회비 납부' : '미납'}
+                        </span>
+                      </div>
+                      <button 
+                        onClick={() => { setEditingId(c.id); setModalType('caregiver'); setShowModal(true); }}
+                        className="text-xs font-bold text-zinc-900 px-4 py-2 bg-zinc-100 rounded-xl hover:bg-zinc-200 transition-colors"
+                      >수정</button>
+                    </div>
                   </div>
-                  <p className="text-sm text-zinc-600 mb-4 line-clamp-2">{c.specialties || '전문 분야 정보 없음'}</p>
-                  <div className="flex items-center justify-between mt-auto pt-4 border-t border-zinc-100">
-                    <span className="text-xs text-zinc-400">{c.contact || '연락처 없음'}</span>
-                    <button 
-                      onClick={() => { setEditingId(c.id); setModalType('caregiver'); setShowModal(true); }}
-                      className="text-xs font-medium text-zinc-900 hover:underline"
-                    >수정</button>
-                  </div>
-                </Card>
-              ))}
-            </div>
+                ))}
+              </div>
+            )
           )}
 
           {activeTab === 'matchings' && (
             <div className="space-y-4">
               {/* Mobile Card View */}
               <div className="grid grid-cols-1 gap-4 md:hidden">
-                {matchings.map(m => {
+                {filteredMatchings.map(m => {
                   const patient = patients.find(p => p.id === m.patientId);
                   const caregiver = caregivers.find(c => c.id === m.caregiverId);
                   return (
@@ -555,7 +754,7 @@ export default function App() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-zinc-50">
-                    {matchings.map(m => {
+                    {filteredMatchings.map(m => {
                       const patient = patients.find(p => p.id === m.patientId);
                       const caregiver = caregivers.find(c => c.id === m.caregiverId);
                       return (
@@ -616,17 +815,16 @@ function AdminManagementView({ admins }: { admins: AdminUser[] }) {
     if (!newAdminEmail) return;
     setIsAdding(true);
     try {
-      // In a real app, we'd need a way to map email to UID, 
-      // but for this demo, we'll use a simplified approach where we add a doc to 'users'
-      // and the security rules handle the rest based on email.
-      // Note: This requires the user to log in at least once to have a UID, 
-      // or we can use a collection for 'allowed_admins'.
-      // For this implementation, we'll assume we're adding to the 'users' collection.
-      // A better way is to have a 'pending_admins' or similar if UID is unknown.
-      alert('관리자 추가 기능은 해당 이메일 사용자가 최초 로그인 시 관리자 권한을 부여받도록 보안 규칙에 설정되어 있습니다. 현재 목록은 시스템에 등록된 관리자들입니다.');
+      // Add to 'users' collection with 'admin' role
+      await addDoc(collection(db, 'users'), {
+        email: newAdminEmail,
+        role: 'admin',
+        createdAt: Timestamp.now()
+      });
       setNewAdminEmail('');
+      alert('관리자가 성공적으로 추가되었습니다.');
     } catch (err) {
-      console.error(err);
+      handleFirestoreError(err, OperationType.CREATE, 'users');
     } finally {
       setIsAdding(false);
     }
@@ -667,16 +865,32 @@ function AdminManagementView({ admins }: { admins: AdminUser[] }) {
             <div key={admin.id} className="px-8 py-4 flex items-center justify-between hover:bg-zinc-50/50 transition-colors">
               <div className="flex items-center gap-4">
                 <div className="w-10 h-10 bg-zinc-100 rounded-full flex items-center justify-center text-zinc-500 font-bold">
-                  {admin.email[0].toUpperCase()}
+                  {admin.email ? admin.email[0].toUpperCase() : '?'}
                 </div>
                 <div>
                   <p className="font-medium">{admin.email}</p>
                   <p className="text-xs text-zinc-400">ID: {admin.id}</p>
                 </div>
               </div>
-              <span className="px-3 py-1 bg-zinc-100 text-zinc-600 rounded-full text-xs font-bold uppercase">
-                {admin.role}
-              </span>
+              <div className="flex items-center gap-3">
+                <span className="px-3 py-1 bg-zinc-100 text-zinc-600 rounded-full text-xs font-bold uppercase">
+                  {admin.role}
+                </span>
+                <button 
+                  onClick={async () => {
+                    if (window.confirm('이 관리자를 삭제하시겠습니까?')) {
+                      try {
+                        await deleteDoc(doc(db, 'users', admin.id));
+                      } catch (err) {
+                        handleFirestoreError(err, OperationType.DELETE, 'users');
+                      }
+                    }
+                  }}
+                  className="p-2 text-zinc-400 hover:text-red-500 transition-colors"
+                >
+                  <XCircle className="w-5 h-5" />
+                </button>
+              </div>
             </div>
           ))}
           {/* Default Admin Display */}
@@ -959,9 +1173,9 @@ function Modal({ type, editingId, onClose, patients, caregivers, matchings }: an
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-zinc-900/40 backdrop-blur-sm">
-      <div className="bg-white w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
-        <form onSubmit={handleSubmit} className="p-8">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-zinc-900/40 backdrop-blur-sm overflow-y-auto">
+      <div className="bg-white w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200 my-auto">
+        <form onSubmit={handleSubmit} className="p-8 max-h-[90vh] overflow-y-auto custom-scrollbar">
           <div className="flex items-center justify-between mb-8">
             <h3 className="text-2xl font-bold">{editingId ? '정보 수정' : '새로 추가'}</h3>
             <button type="button" onClick={onClose} className="p-2 hover:bg-zinc-100 rounded-full transition-colors">
