@@ -127,10 +127,11 @@ service cloud.firestore {
     // ===============================================================
 
     match /users/{userId} {
-      allow read: if isOwner(userId) || isAdmin();
+      allow read: if isAuthenticated() && (isOwner(userId) || isAdmin());
       allow create: if isOwner(userId) && isValidUser(request.resource.data);
       allow update: if isOwner(userId) && isValidUser(request.resource.data) && 
                       request.resource.data.role == resource.data.role; // Cannot change role
+      allow delete: if isAdmin();
     }
 
     match /patients/{patientId} {

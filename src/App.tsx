@@ -239,7 +239,11 @@ export default function App() {
 
     const qAdmins = query(collection(db, 'users'), orderBy('createdAt', 'desc'));
     const unsubAdmins = onSnapshot(qAdmins, (snapshot) => {
-      setAdmins(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as AdminUser)));
+      // Filter only users with 'admin' role
+      setAdmins(snapshot.docs
+        .map(d => ({ id: d.id, ...d.data() } as AdminUser))
+        .filter(a => a.role === 'admin')
+      );
     }, (err) => handleFirestoreError(err, OperationType.LIST, 'users'));
 
     return () => {
